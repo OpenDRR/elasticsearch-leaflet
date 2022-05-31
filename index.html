@@ -124,9 +124,9 @@ opacity: .5;
     <script>
 
         var feature_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_s",
-            heat_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_b",
+            grid_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_b",
             feature_index_prop = "sH_PGA",
-            base_url = "https://api.stage.riskprofiler.ca/",
+            base_url = "https://api.riskprofiler.ca/",
             featureLimit = 10000,
             markers = [],
             zoom = 5,
@@ -302,8 +302,8 @@ opacity: .5;
             }
 
             var feature_url = scroll_id ? 
-                "https://api.stage.riskprofiler.ca/_search/scroll"
-                    : "https://api.stage.riskprofiler.ca/" + feature_index + "/_search?scroll=1m";
+                "https://api.riskprofiler.ca/_search/scroll"
+                    : "https://api.riskprofiler.ca/" + feature_index + "/_search?scroll=1m";
 
             // Get Feature data
             
@@ -365,7 +365,7 @@ opacity: .5;
             // Geotile Grid Aggregation
 
             /*
-                heat_index
+                grid_index
             */
             var d = {
                 "size": 0,
@@ -411,7 +411,7 @@ opacity: .5;
             
             // Get Heat Map and Grid data
 
-            var url = base_url + heat_index + "/_search";
+            var url = base_url + grid_index + "/_search";
             
             $.ajax({
                 method: "POST",
