@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
-
         body {
             font-family: Arial, Helvetica, sans-serif;
         }
@@ -88,11 +87,12 @@
 
         #sidebar {
             overflow: auto;
+            margin-bottom: 20px;
         }
 
         .leaflet-heatmap-layer {
-opacity: .5;
-}
+            opacity: .7;
+        }
     </style>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
@@ -104,8 +104,8 @@ opacity: .5;
     <script src="https://code.jquery.com/jquery-1.12.2.min.js"
         integrity="sha256-lZFHibXzMHo3GGeehn1hudTAP3Sc0uKXBXAzHX1sjtk=" crossorigin="anonymous"></script>
 
-    <script src="leaflet-heat.js"></script>
-    <script src="sphericalmercator.js"></script>
+    <script src="js/leaflet-heat.js"></script>
+    <script src="js/sphericalmercator.js"></script>
 
 </head>
 
@@ -115,36 +115,40 @@ opacity: .5;
     
     <div id="alert">Too many results returned! Not all features were added to the map. Try zooming into a smaller map extent.</div>
     
-    <div id="map" style="z-index: 1;"></div>
+    <div id="map" style="z-index:1;"></div>
     
     <div id="sidebar"></div>
-
-    <p></p>
     
     <script>
 
+        // Elasticsearch index settings
         var feature_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_s",
-            heat_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_b",
+            grid_index = "opendrr_dsra_sim9p0_cascadiainterfacebestfault_indicators_b",
             feature_index_prop = "sH_PGA",
-            base_url = "https://api.stage.riskprofiler.ca/",
-            featureLimit = 10000,
-            markers = [],
-            zoom = 5,
-            map;
+            base_url = "https://api.riskprofiler.ca/";
 
-        var merc = new SphericalMercator({
-            size: 256
-        });
-
+        // Basemap settings
         var tiles = L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors, Points &copy 2012 LINZ'
         });
 
-        var geojsonLayer = L.geoJSON( null, { style: featureStyle } ),
-            heat = L.heatLayer( markers, { blur: 15, radius: 25 } ), // , gradient: { 0.4: 'yellow', 0.5: 'orange', 1: 'red' } } ),
+        // Application settings
+        var merc = new SphericalMercator( { size: 256 } ),
+            markers = [],
+            featureLayer = L.geoJSON( null, { style: featureStyle } ),
+            gridLayer = L.layerGroup(),
+            heatLayer = L.heatLayer( markers, { blur: 15, radius: 25 } ), // , gradient: { 0.4: 'yellow', 0.5: 'orange', 1: 'red' } } ),
             legend = L.control( { position: 'bottomright' } ),
-            map = L.map( 'map', { layers: [ tiles, geojsonLayer, heat ] }),
-            bboxLayer = L.layerGroup().addTo( map );
+            map = L.map( 'map', { layers: [ tiles, gridLayer ] }),
+            overlayMaps = {
+                "Features": featureLayer,
+                "Heat": heatLayer,
+                "Grid": gridLayer
+            },
+            featureLimit = 10000,
+            zoom = 5;
+
+        L.control.layers( overlayMaps ).addTo( map );
         
         map.on( 'load', function ( e ) { 
             
@@ -157,7 +161,7 @@ opacity: .5;
 
         // map.setView( [49.2827, -123.1207], 12 );
         // map.setView( [56, -106], zoom ); // national
-        map.setView( [54.7, -127.7], zoom ); // bc
+        map.setView( [ 54.7, -127.7 ], zoom ); // bc
 
         map.on( 'zoomend dragend', function ( e ) {
 
@@ -170,14 +174,6 @@ opacity: .5;
             search();
         });
 
-        var overlayMaps = {
-            "Features": geojsonLayer,
-            "Heat": heat,
-            "Grid": bboxLayer
-        };
-
-        L.control.layers(overlayMaps).addTo( map );
-
         function search( scroll_id ) {
             
             $( '#alert' ).hide();
@@ -186,24 +182,24 @@ opacity: .5;
             map.removeControl( legend );
             
             // clear the layers
-            geojsonLayer.clearLayers();
-            bboxLayer.clearLayers();
+            featureLayer.clearLayers();
+            gridLayer.clearLayers();
             
             // control layer visibility
             if ( map.getZoom() <= 11 ) { 
-                map.removeLayer( geojsonLayer );
+                map.removeLayer( featureLayer );
             }
             if ( map.getZoom() >= 4 ) { 
-                map.removeLayer( heat );
-                map.addLayer( bboxLayer );
+                map.removeLayer( heatLayer );
+                map.addLayer( gridLayer );
             }
             if ( map.getZoom() > 6 ) {
-                map.addLayer( heat );
-                map.removeLayer( bboxLayer );
+                map.addLayer( heatLayer );
+                map.removeLayer( gridLayer );
             }
             if ( map.getZoom() > 11 ) {
-                map.removeLayer( heat );
-                map.addLayer( geojsonLayer );
+                map.removeLayer( heatLayer );
+                map.addLayer( featureLayer );
 
                 // get feature data
                 getFeatureData();
@@ -243,6 +239,7 @@ opacity: .5;
 
         }
 
+        // Get the GeoJSON features for featureLayer from Elasticsearch
         function getFeatureData( scroll_id ) {
 
             var b = map.getBounds(),
@@ -294,16 +291,7 @@ opacity: .5;
             //     }
             // };
 
-            if ( scroll_id ) {
-                feature_query = {
-                    "scroll": "1m",
-                    "scroll_id" : scroll_id
-                }
-            }
-
-            var feature_url = scroll_id ? 
-                "https://api.stage.riskprofiler.ca/_search/scroll"
-                    : "https://api.stage.riskprofiler.ca/" + feature_index + "/_search?scroll=1m";
+            var feature_url = base_url + feature_index + "/_search";
 
             // Get Feature data
             
@@ -318,7 +306,7 @@ opacity: .5;
             })
             .done( function ( resp ) {
 
-                var len = geojsonLayer.getLayers().length;
+                var len = featureLayer.getLayers().length;
 
                 if ( len === resp.hits.total.value || len === featureLimit ) {
                     $( '#modal' ).remove();
@@ -329,7 +317,7 @@ opacity: .5;
                         if ( resp.hits.hits.length > 0 && len <= featureLimit ) {
                             getFeatureData( resp._scroll_id );
                         }
-                        if ( geojsonLayer.getLayers().length >= featureLimit ) {
+                        if ( featureLayer.getLayers().length >= featureLimit ) {
                             $( '#alert' ).show();
                         }
                     } );
@@ -350,7 +338,7 @@ opacity: .5;
             });
         }
         
-
+        // Get grid aggregations from Elasticsearch for heatLayer and gridLayer
         function getGridData() {
 
             var b = map.getBounds(),
@@ -364,9 +352,6 @@ opacity: .5;
             
             // Geotile Grid Aggregation
 
-            /*
-                heat_index
-            */
             var d = {
                 "size": 0,
                 "aggs": {
@@ -376,7 +361,7 @@ opacity: .5;
                                 "must": [
                                     // {
                                     //     "range": {
-                                    //         "properties.sH_PGA": {
+                                    //         "properties." + feature_index_prop: {
                                     //             "gte": 0.002
                                     //         }
                                     //     }
@@ -393,12 +378,19 @@ opacity: .5;
                             }
                         },
                         "aggs": {
-                            "avg_my_field": {
+                            "avg": {
                                 "avg": {
-                                    "field": "properties.sH_PGA"
+                                    "field": "properties." + feature_index_prop
                                 }
                             },
-                            "large-grid": {
+                            "grid": {
+                                "aggs": {
+                                    "avg": {
+                                        "avg": {
+                                            "field": "properties." + feature_index_prop
+                                        }
+                                    }
+                                },
                                 "geotile_grid": {
                                     "field": "coordinates",
                                     "precision": calcPrecision()
@@ -408,10 +400,8 @@ opacity: .5;
                     }
                 }
             }
-            
-            // Get Heat Map and Grid data
 
-            var url = base_url + heat_index + "/_search";
+            let url = base_url + grid_index + "/_search";
             
             $.ajax({
                 method: "POST",
@@ -426,41 +416,37 @@ opacity: .5;
 
                 let markers = [];
 
-                const buckets = resp.aggregations['my_applicable_filters']['large-grid'].buckets;
+                const buckets = resp.aggregations[ 'my_applicable_filters' ][ 'grid' ].buckets;
 
                 buckets.forEach( bucket => {
 
-                    splitbucket = bucket.key.split('/');
+                    splitbucket = bucket.key.split( '/' );
 
-                    let z = splitbucket[0];
-                    let x = splitbucket[1];
-                    let y = splitbucket[2];
+                    let z = splitbucket[ 0 ];
+                    let x = splitbucket[ 1 ];
+                    let y = splitbucket[ 2 ];
 
                     let lat = tile2lat( y, z );
                     let lon = tile2long( x, z );
 
                     markers.push( [ lat, lon, bucket.doc_count ] );
 
-                    var bbox = merc.bbox( x, y, z ); //, tms_style, srs)
+                    let bbox = merc.bbox( x, y, z ); //, tms_style, srs)
 
                     // define rectangle geographical bounds
-                    var bounds = [ [ bbox[1], bbox[0] ], [ bbox[3], bbox[2] ] ];
+                    let bounds = [ [ bbox[ 1 ], bbox[ 0 ] ], [ bbox[ 3 ], bbox[ 2 ] ] ];
 
-                    // create an orange rectangle
-                    var feature = L.rectangle( bounds, { color: getBucketColor( bucket.doc_count ), weight: 0, fillOpacity: 0.5 } );
+                    // create an rectangle
+                    let feature = L.rectangle( bounds, { color: getFeatureColor( bucket.avg['value'] ), weight: 0, fillOpacity: 0.7 } );
 
-                    bboxLayer.addLayer( feature );
-
-                    // https://github.com/adammertel/Leaflet.RegularGridCluster
-                    // https://observablehq.com/@larsvers/hexgrid-maps-with-d3-hexgrid
-                    // http://bl.ocks.org/tnightingale/4668062
-
+                    gridLayer.addLayer( feature );
                     
                 }); 
 
                 // display the heatmap
-                heat.setLatLngs( markers );
-                heat.setOptions( { blur: 15, radius: 25 } );
+                if ( map.hasLayer( heatLayer ) ) {
+                    heatLayer.setLatLngs( markers );
+                }
 
                 $( '#modal' ).remove();
 
@@ -471,8 +457,7 @@ opacity: .5;
                     //try again
                     $.ajax( this );
                     return;
-                }   
-                console.log( "Doh! " + error )         
+                }
                 return;
                 
             });
@@ -504,49 +489,24 @@ opacity: .5;
                 features.push( source );
             });
 
-            geojsonLayer.addData( features );
+            featureLayer.addData( features );
 
             if ( callback ) {
                 callback();
             }
         }
 
-        // Generated by RampGenerator.com
-
-        // This function allows you to enter a value and have the color returned,
-        // useful when coloring geojson maps or anything else you can think of.
-
-        // sample usage:
-        // console.log(getFeatureColor(40));
-        // result: #64ABD7
-
-        function getFeatureColor(v) {
-            return v >= 0.31 ? '#bd0026' :
-                v >= 0.20 ? '#eb3420' :
-                v >= 0.13 ? '#fb7b35' :
-                v >= 0.08 ? '#feb751' :
-                v >= 0.03 ? '#ffe98c' :
-                v >= 0.01 ? '#ffff1d' :
-                        '#ffff1d'; 
-        }
-
-        // Generated by RampGenerator.com
-
-        // This function allows you to enter a value and have the color returned,
-        // useful when coloring geojson maps or anything else you can think of.
-
-        // sample usage:
-        // console.log(getFeatureColor(222222));
-        // result: #CB1230
-
-        function getBucketColor( v ) {
-            return v >= 10000 ? '#bd0026' :
-                v >= 7778 ? '#eb3420' :
-                v >= 5556 ? '#fb7b35' :
-                v >= 3333 ? '#feb751' :
-                v >= 1111 ? '#ffe98c' :
-                v >= 0 ? '#ffff1d' :
-                        '#ffff1d'; 
+        function getFeatureColor( v ) {
+            return v > 1.24 ? 'rgb(128, 0, 38)' :
+                v >= 0.65 ? 'rgb(189, 0, 38)' :
+                v >= 0.34 ? 'rgb(227, 26, 28)' :
+                v >= 0.18 ? 'rgb(252, 78, 42)' :
+                v >= 0.092 ? 'rgb(253, 141, 60)' :
+                v >= 0.039 ? 'rgb(254, 178, 76)' :
+                v >= 0.014 ? 'rgb(254, 217, 118)' :
+                v >= 0.0017 ? 'rgb(255, 237, 160)' :
+                v >= 0.0015 ? 'rgb(255, 255, 204)' :
+                    'rgb(255, 255, 204)'; 
         }
 
         function featureStyle( feature ) {
@@ -556,18 +516,18 @@ opacity: .5;
                 opacity: 1,
                 color: 'white',
                 dashArray: '0',
-                fillOpacity: 0.5
+                fillOpacity: 0.7
             };
         }
 
-        geojsonLayer.on( 'click', function ( e ) {
+        featureLayer.on( 'click', function ( e ) {
 
             $.ajax({
                 method: "GET",
                 tryCount : 0,
                 retryLimit : 3,
                 crossDomain: true,
-                url: base_url + feature_index + "/_doc/" + e.layer.feature.properties['_id'],
+                url: base_url + feature_index + "/_doc/" + e.layer.feature.properties[ '_id' ],
                 headers: { "content-type": "application/json" }
             })
             .done( function ( resp ) {
@@ -592,8 +552,7 @@ opacity: .5;
                     //try again
                     $.ajax( this );
                     return;
-                }   
-                console.log( "Doh! " + error )         
+                }       
                 return;
                 
             });
@@ -603,16 +562,16 @@ opacity: .5;
         legend.onAdd = function ( map ) {
 
             var div = L.DomUtil.create('div', 'info legend'),
-                grades = [0.01 , 0.03, 0.08, 0.13, 0.20, 0.31],
+                grades = [0.0015, 0.0017, 0.014, 0.039, 0.092, 0.18, 0.34, 0.65, 1.24],
                 labels = [];
 
             div.innerHTML = "<div style=\"padding: 3px;\"><b>" + feature_index_prop + "</b></div>";
 
             // loop through our density intervals and generate a label with a colored square for each interval
-            for (var i = 0; i < grades.length; i++ ) {
+            for ( var i = 0; i < grades.length; i++ ) {
                 div.innerHTML +=
-                    '<i style="background:' + getFeatureColor(grades[i]) + '"></i> ' +
-                    grades[i] + ( grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+' );
+                    '<span style="white-space: nowrap;"><i style="background:' + getFeatureColor( grades[ i ] ) + '"></i> ' +
+                    grades[ i ] + ( grades[ i + 1 ] ? '&ndash;' + grades[ i + 1 ] + '</span><br>' : '+' );
             }
 
             return div;
