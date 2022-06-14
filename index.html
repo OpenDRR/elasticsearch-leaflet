@@ -20,8 +20,8 @@
             line-height: 18px;
             color: #555;
             background: white;
-            background: rgba(255,255,255,0.8);
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
             padding: 6px 8px;
         }
@@ -42,7 +42,7 @@
             background: rgb(220, 20, 20);
             color: white;
             padding: 5px;
-            
+
         }
 
         #modal {
@@ -58,9 +58,11 @@
             0% {
                 background-color: white;
             }
+
             50% {
-                background-color:rgba(255, 0, 0, 0.500);
+                background-color: rgba(255, 0, 0, 0.500);
             }
+
             100% {
                 background-color: white;
             }
@@ -112,13 +114,14 @@
 <body>
 
     <h1>Sample Leaflet Map with Elasticsearch</h1>
-    
-    <div id="alert">Too many results returned! Not all features were added to the map. Try zooming into a smaller map extent.</div>
-    
+
+    <div id="alert">Too many results returned! Not all features were added to the map. Try zooming into a smaller map
+        extent.</div>
+
     <div id="map" style="z-index:1;"></div>
-    
+
     <div id="sidebar"></div>
-    
+
     <script>
 
         // Elasticsearch index settings
@@ -133,13 +136,13 @@
         });
 
         // Application settings
-        var merc = new SphericalMercator( { size: 256 } ),
+        var merc = new SphericalMercator({ size: 256 }),
             markers = [],
-            featureLayer = L.geoJSON( null, { style: featureStyle } ),
+            featureLayer = L.geoJSON(null, { style: featureStyle }),
             gridLayer = L.layerGroup(),
-            heatLayer = L.heatLayer( markers, { blur: 15, radius: 25 } ), // , gradient: { 0.4: 'yellow', 0.5: 'orange', 1: 'red' } } ),
-            legend = L.control( { position: 'bottomright' } ),
-            map = L.map( 'map', { layers: [ tiles, gridLayer ] }),
+            heatLayer = L.heatLayer(markers, { blur: 15, radius: 25 }), // , gradient: { 0.4: 'yellow', 0.5: 'orange', 1: 'red' } } ),
+            legend = L.control({ position: 'bottomright' }),
+            map = L.map('map', { layers: [tiles, gridLayer] }),
             overlayMaps = {
                 "Features": featureLayer,
                 "Heat": heatLayer,
@@ -148,66 +151,66 @@
             featureLimit = 10000,
             zoom = 5;
 
-        L.control.layers( overlayMaps ).addTo( map );
-        
-        map.on( 'load', function ( e ) { 
-            
-            // add progress indicator
-            if( $( '#modal' ).length == 0 ) {
-                $( '#map' ).before( '<div id="modal"></div>' );
-            }
-            search(); 
-        });
+        L.control.layers(overlayMaps).addTo(map);
 
-        // map.setView( [49.2827, -123.1207], 12 );
-        // map.setView( [56, -106], zoom ); // national
-        map.setView( [ 54.7, -127.7 ], zoom ); // bc
-
-        map.on( 'zoomend dragend', function ( e ) {
-
-            zoom = e.target.getZoom();
+        map.on('load', function (e) {
 
             // add progress indicator
-            if( $( '#modal' ).length == 0 ) {
-                $( '#map' ).before( '<div id="modal"></div>' );
+            if ($('#modal').length == 0) {
+                $('#map').before('<div id="modal"></div>');
             }
             search();
         });
 
-        function search( scroll_id ) {
-            
-            $( '#alert' ).hide();
+        // map.setView( [49.2827, -123.1207], 12 );
+        // map.setView( [56, -106], zoom ); // national
+        map.setView([54.7, -127.7], zoom); // bc
+
+        map.on('zoomend dragend', function (e) {
+
+            zoom = e.target.getZoom();
+
+            // add progress indicator
+            if ($('#modal').length == 0) {
+                $('#map').before('<div id="modal"></div>');
+            }
+            search();
+        });
+
+        function search(scroll_id) {
+
+            $('#alert').hide();
 
             // remove the legend
-            map.removeControl( legend );
-            
+            map.removeControl(legend);
+
             // clear the layers
             featureLayer.clearLayers();
             gridLayer.clearLayers();
-            
+
             // control layer visibility
-            if ( map.getZoom() <= 11 ) { 
-                map.removeLayer( featureLayer );
+            if (map.getZoom() <= 11) {
+                map.removeLayer(featureLayer);
             }
-            if ( map.getZoom() >= 4 ) { 
-                map.removeLayer( heatLayer );
-                map.addLayer( gridLayer );
+            if (map.getZoom() >= 4) {
+                map.removeLayer(heatLayer);
+                map.addLayer(gridLayer);
             }
-            if ( map.getZoom() > 6 ) {
-                map.addLayer( heatLayer );
-                map.removeLayer( gridLayer );
+            if (map.getZoom() > 6) {
+                map.addLayer(heatLayer);
+                map.removeLayer(gridLayer);
             }
-            if ( map.getZoom() > 11 ) {
-                map.removeLayer( heatLayer );
-                map.addLayer( featureLayer );
+            if (map.getZoom() > 11) {
+                map.removeLayer(heatLayer);
+                map.addLayer(featureLayer);
 
                 // get feature data
                 getFeatureData();
 
                 // add the legend
-                legend.addTo( map );
+                legend.addTo(map);
             }
-            
+
             getGridData();
         }
 
@@ -231,16 +234,16 @@
         */
         function calcPrecision() {
 
-            let p = ( zoom*( 29/18 ) ).toFixed( 0 );
+            let p = (zoom * (29 / 18)).toFixed(0);
 
             p = ++p;
-            
+
             return ++p;
 
         }
 
         // Get the GeoJSON features for featureLayer from Elasticsearch
-        function getFeatureData( scroll_id ) {
+        function getFeatureData(scroll_id) {
 
             var b = map.getBounds(),
                 b1 = {
@@ -249,17 +252,17 @@
                     "brlat": b.getSouthEast().lat < -90 ? -90 : b.getSouthEast().lat,
                     "brlon": b.getSouthEast().lng > 180 ? 180 : b.getSouthEast().lng
                 }, scroll_id;
-            
+
             // bounding box query
-            var feature_query = {  
+            var feature_query = {
                 "size": 1000,
-                "_source": [ "id","type", "geometry.*", "properties." + feature_index_prop ],
+                "_source": ["id", "type", "geometry.*", "properties." + feature_index_prop],
                 "query": {
                     "geo_shape": {
                         "geometry": {
                             "shape": {
                                 "type": "envelope",
-                                "coordinates": [ [ b1.tllon, b1.tllat ], [ b1.brlon, b1.brlat ] ]
+                                "coordinates": [[b1.tllon, b1.tllat], [b1.brlon, b1.brlat]]
                             },
                             "relation": "intersects"
                         }
@@ -294,50 +297,50 @@
             var feature_url = base_url + feature_index + "/_search";
 
             // Get Feature data
-            
+
             $.ajax({
                 method: "POST",
-                tryCount : 0,
-                retryLimit : 3,
+                tryCount: 0,
+                retryLimit: 3,
                 crossDomain: true,
                 url: feature_url,
-                data: JSON.stringify( feature_query ),
+                data: JSON.stringify(feature_query),
                 headers: { "content-type": "application/json" }
             })
-            .done( function ( resp ) {
+                .done(function (resp) {
 
-                var len = featureLayer.getLayers().length;
+                    var len = featureLayer.getLayers().length;
 
-                if ( len === resp.hits.total.value || len === featureLimit ) {
-                    $( '#modal' ).remove();
-                }
+                    if (len === resp.hits.total.value || len === featureLimit) {
+                        $('#modal').remove();
+                    }
 
-                if ( len < resp.hits.total.value && len < featureLimit ) {
-                    addGeoJSONFeatures( resp.hits.hits, function( e ) {
-                        if ( resp.hits.hits.length > 0 && len <= featureLimit ) {
-                            getFeatureData( resp._scroll_id );
-                        }
-                        if ( featureLayer.getLayers().length >= featureLimit ) {
-                            $( '#alert' ).show();
-                        }
-                    } );
-                }
+                    if (len < resp.hits.total.value && len < featureLimit) {
+                        addGeoJSONFeatures(resp.hits.hits, function (e) {
+                            if (resp.hits.hits.length > 0 && len <= featureLimit) {
+                                getFeatureData(resp._scroll_id);
+                            }
+                            if (featureLayer.getLayers().length >= featureLimit) {
+                                $('#alert').show();
+                            }
+                        });
+                    }
 
-                
-            })
-            .fail( function ( error ) {
-                this.tryCount++;
-                if ( this.tryCount <= this.retryLimit ) {
-                    //try again
-                    $.ajax( this );
+
+                })
+                .fail(function (error) {
+                    this.tryCount++;
+                    if (this.tryCount <= this.retryLimit) {
+                        //try again
+                        $.ajax(this);
+                        return;
+                    }
+                    console.log("Doh! " + error)
                     return;
-                }   
-                console.log( "Doh! " + error )         
-                return;
-                
-            });
+
+                });
         }
-        
+
         // Get grid aggregations from Elasticsearch for heatLayer and gridLayer
         function getGridData() {
 
@@ -348,8 +351,8 @@
                     "brlat": b.getSouthEast().lat < -90 ? -90 : b.getSouthEast().lat,
                     "brlon": b.getSouthEast().lng > 180 ? 180 : b.getSouthEast().lng
                 }, scroll_id;
-            
-            
+
+
             // Geotile Grid Aggregation
 
             var d = {
@@ -402,116 +405,116 @@
             }
 
             let url = base_url + grid_index + "/_search";
-            
+
             $.ajax({
                 method: "POST",
-                tryCount : 0,
-                retryLimit : 3,
+                tryCount: 0,
+                retryLimit: 3,
                 crossDomain: true,
                 url: url,
-                data: JSON.stringify( d ),
+                data: JSON.stringify(d),
                 headers: { "content-type": "application/json" }
             })
-            .done( function ( resp ) {
+                .done(function (resp) {
 
-                let markers = [];
+                    let markers = [];
 
-                const buckets = resp.aggregations[ 'my_applicable_filters' ][ 'grid' ].buckets;
+                    const buckets = resp.aggregations['my_applicable_filters']['grid'].buckets;
 
-                buckets.forEach( bucket => {
+                    buckets.forEach(bucket => {
 
-                    splitbucket = bucket.key.split( '/' );
+                        splitbucket = bucket.key.split('/');
 
-                    let z = splitbucket[ 0 ];
-                    let x = splitbucket[ 1 ];
-                    let y = splitbucket[ 2 ];
+                        let z = splitbucket[0];
+                        let x = splitbucket[1];
+                        let y = splitbucket[2];
 
-                    let lat = tile2lat( y, z );
-                    let lon = tile2long( x, z );
+                        let lat = tile2lat(y, z);
+                        let lon = tile2long(x, z);
 
-                    markers.push( [ lat, lon, bucket.doc_count ] );
+                        markers.push([lat, lon, bucket.doc_count]);
 
-                    let bbox = merc.bbox( x, y, z ); //, tms_style, srs)
+                        let bbox = merc.bbox(x, y, z); //, tms_style, srs)
 
-                    // define rectangle geographical bounds
-                    let bounds = [ [ bbox[ 1 ], bbox[ 0 ] ], [ bbox[ 3 ], bbox[ 2 ] ] ];
+                        // define rectangle geographical bounds
+                        let bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]];
 
-                    // create an rectangle
-                    let feature = L.rectangle( bounds, { color: getFeatureColor( bucket.avg['value'] ), weight: 0, fillOpacity: 0.7 } );
+                        // create an rectangle
+                        let feature = L.rectangle(bounds, { color: getFeatureColor(bucket.avg['value']), weight: 0, fillOpacity: 0.7 });
 
-                    gridLayer.addLayer( feature );
-                    
-                }); 
+                        gridLayer.addLayer(feature);
 
-                // display the heatmap
-                if ( map.hasLayer( heatLayer ) ) {
-                    heatLayer.setLatLngs( markers );
-                }
+                    });
 
-                $( '#modal' ).remove();
+                    // display the heatmap
+                    if (map.hasLayer(heatLayer)) {
+                        heatLayer.setLatLngs(markers);
+                    }
 
-            })
-            .fail( function ( error ) {
-                this.tryCount++;
-                if ( this.tryCount <= this.retryLimit ) {
-                    //try again
-                    $.ajax( this );
+                    $('#modal').remove();
+
+                })
+                .fail(function (error) {
+                    this.tryCount++;
+                    if (this.tryCount <= this.retryLimit) {
+                        //try again
+                        $.ajax(this);
+                        return;
+                    }
                     return;
-                }
-                return;
-                
-            });
 
-            $( '#modal' ).remove();
+                });
+
+            // $( '#modal' ).remove();
         }
 
         // tile to lat lon calculations
         // https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Implementations
 
-        function tile2long( x, z ) {
-            return ( x/Math.pow( 2, z )*360-180 );
-        }
-        
-        function tile2lat( y, z ) {
-            var n=Math.PI-2*Math.PI*y/Math.pow( 2, z );
-            return ( 180/Math.PI*Math.atan( 0.5*( Math.exp( n )-Math.exp( -n ))) );
+        function tile2long(x, z) {
+            return (x / Math.pow(2, z) * 360 - 180);
         }
 
-        function addGeoJSONFeatures( data, callback ) {
+        function tile2lat(y, z) {
+            var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+            return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
+        }
+
+        function addGeoJSONFeatures(data, callback) {
 
             var features = [],
                 source,
                 d;
 
-            data.forEach( feature => {
+            data.forEach(feature => {
                 source = feature._source;
                 source.properties._id = feature._id;
-                features.push( source );
+                features.push(source);
             });
 
-            featureLayer.addData( features );
+            featureLayer.addData(features);
 
-            if ( callback ) {
+            if (callback) {
                 callback();
             }
         }
 
-        function getFeatureColor( v ) {
+        function getFeatureColor(v) {
             return v > 1.24 ? 'rgb(128, 0, 38)' :
                 v >= 0.65 ? 'rgb(189, 0, 38)' :
-                v >= 0.34 ? 'rgb(227, 26, 28)' :
-                v >= 0.18 ? 'rgb(252, 78, 42)' :
-                v >= 0.092 ? 'rgb(253, 141, 60)' :
-                v >= 0.039 ? 'rgb(254, 178, 76)' :
-                v >= 0.014 ? 'rgb(254, 217, 118)' :
-                v >= 0.0017 ? 'rgb(255, 237, 160)' :
-                v >= 0.0015 ? 'rgb(255, 255, 204)' :
-                    'rgb(255, 255, 204)'; 
+                    v >= 0.34 ? 'rgb(227, 26, 28)' :
+                        v >= 0.18 ? 'rgb(252, 78, 42)' :
+                            v >= 0.092 ? 'rgb(253, 141, 60)' :
+                                v >= 0.039 ? 'rgb(254, 178, 76)' :
+                                    v >= 0.014 ? 'rgb(254, 217, 118)' :
+                                        v >= 0.0017 ? 'rgb(255, 237, 160)' :
+                                            v >= 0.0015 ? 'rgb(255, 255, 204)' :
+                                                'rgb(255, 255, 204)';
         }
 
-        function featureStyle( feature ) {
+        function featureStyle(feature) {
             return {
-                fillColor: getFeatureColor( feature.properties[ feature_index_prop ] ),
+                fillColor: getFeatureColor(feature.properties[feature_index_prop]),
                 weight: 0.5,
                 opacity: 1,
                 color: 'white',
@@ -520,46 +523,46 @@
             };
         }
 
-        featureLayer.on( 'click', function ( e ) {
+        featureLayer.on('click', function (e) {
 
             $.ajax({
                 method: "GET",
-                tryCount : 0,
-                retryLimit : 3,
+                tryCount: 0,
+                retryLimit: 3,
                 crossDomain: true,
-                url: base_url + feature_index + "/_doc/" + e.layer.feature.properties[ '_id' ],
+                url: base_url + feature_index + "/_doc/" + e.layer.feature.properties['_id'],
                 headers: { "content-type": "application/json" }
             })
-            .done( function ( resp ) {
+                .done(function (resp) {
 
-                let props = resp._source.properties,
-                    string = '';
+                    let props = resp._source.properties,
+                        string = '';
 
-                for ( const key in props ) {
+                    for (const key in props) {
 
-                    if ( key === 'geom_poly' || key === 'geom_point' ) { continue }
+                        if (key === 'geom_poly' || key === 'geom_point') { continue }
 
-                    string +=
-                        '<div class="attr"><span class="prop">' + key + '</span><span class="val">' + props[key] + '</span></div>';
-                }
-            
-                $( '#sidebar' ).html( '<h3>Selected feature properties</h3>' + string );
-                
-            })
-            .fail( function ( error ) {
-                this.tryCount++;
-                if ( this.tryCount <= this.retryLimit ) {
-                    //try again
-                    $.ajax( this );
+                        string +=
+                            '<div class="attr"><span class="prop">' + key + '</span><span class="val">' + props[key] + '</span></div>';
+                    }
+
+                    $('#sidebar').html('<h3>Selected feature properties</h3>' + string);
+
+                })
+                .fail(function (error) {
+                    this.tryCount++;
+                    if (this.tryCount <= this.retryLimit) {
+                        //try again
+                        $.ajax(this);
+                        return;
+                    }
                     return;
-                }       
-                return;
-                
-            });
-            
+
+                });
+
         });
 
-        legend.onAdd = function ( map ) {
+        legend.onAdd = function (map) {
 
             var div = L.DomUtil.create('div', 'info legend'),
                 grades = [0.0015, 0.0017, 0.014, 0.039, 0.092, 0.18, 0.34, 0.65, 1.24],
@@ -568,10 +571,10 @@
             div.innerHTML = "<div style=\"padding: 3px;\"><b>" + feature_index_prop + "</b></div>";
 
             // loop through our density intervals and generate a label with a colored square for each interval
-            for ( var i = 0; i < grades.length; i++ ) {
+            for (var i = 0; i < grades.length; i++) {
                 div.innerHTML +=
-                    '<span style="white-space: nowrap;"><i style="background:' + getFeatureColor( grades[ i ] ) + '"></i> ' +
-                    grades[ i ] + ( grades[ i + 1 ] ? '&ndash;' + grades[ i + 1 ] + '</span><br>' : '+' );
+                    '<span style="white-space: nowrap;"><i style="background:' + getFeatureColor(grades[i]) + '"></i> ' +
+                    grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '</span><br>' : '+');
             }
 
             return div;
